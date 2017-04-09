@@ -1,0 +1,18 @@
+{
+  "name": "noip-updater",
+  "version": "1.0.0",
+  "description": "Regularly check public IP and set the new IP on NOIP.com if changed",
+  "main": "index.js",
+  "dependencies": {
+    "immutable": "^3.8.1"
+  },
+  "devDependencies": {
+    "@types/node": "^7.0.12"
+  },
+  "scripts": {
+    "build": "tsc",
+    "run": "tsc && node dist/backend"
+  },
+  "author": "peter.dunay.kovacs@gmail.com",
+  "license": "Apache-2.0"
+}
