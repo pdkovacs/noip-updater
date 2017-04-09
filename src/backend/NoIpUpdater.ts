@@ -9,7 +9,11 @@ const defaultRequestOptions : RequestOptions = Immutable.fromJS({
 });
 
 const createRequestOptions : (hostname : string, myip : string, auth : string) => RequestOptions = (hostname, myip, auth) => {
-    return null;
+    return Object.assign(defaultRequestOptions, {
+        hostname: hostname,
+        myip: myip,
+        auth: auth
+    });
 };
 
 export class NoIpUpdater {
