@@ -1,3 +1,4 @@
+import * as Immutable from 'immutable';
 import * as https from 'https';
 import { ClientRequest, IncomingMessage } from 'http';
 
@@ -8,7 +9,15 @@ const requestOptions = {
     method: 'GET'
 };
 
+const NO_CHANGE = '__nochange__';
+
 export class MyPublicIPChecker {
+
+    private initialIp : string;
+
+    constructor(initialIp : string) {
+        this.initialIp = initialIp;
+    }
 
     public check() : Promise<string> {
 
@@ -21,13 +30,10 @@ export class MyPublicIPChecker {
                 response.on('data', (chunk) => { 
                     output += chunk;
                 }).on('end', () => {
-                    switch (output) {
-                        case 'nohost':
-                            reject(output);
-                            break;
-                        default:
-                            resolve(output);
-                            break;
+                    if (output === this.initialIp) {
+                        resolve(NO_CHANGE);
+                    } else {
+                        resolve(output);
                     }
                 });
             })
@@ -38,6 +44,9 @@ export class MyPublicIPChecker {
             request.end();
         });
 
-    }  
+    }
 
+    public static isNewIp(maybeNewIp : string) : boolean {
+        return maybeNewIp !== NO_CHANGE;
+    }
 }

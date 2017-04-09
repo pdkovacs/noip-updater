@@ -11,7 +11,7 @@
   },
   "scripts": {
     "build": "tsc",
-    "run": "tsc && node dist/backend"
+    "run": "rm -rf dist && tsc && node dist/noip-updater.js"
   },
   "author": "peter.dunay.kovacs@gmail.com",
   "license": "Apache-2.0"
