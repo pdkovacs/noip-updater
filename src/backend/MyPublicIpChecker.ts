@@ -11,7 +11,7 @@ const requestOptions = {
 
 const NO_CHANGE = '__nochange__';
 
-export class MyPublicIPChecker {
+export class MyPublicIpChecker {
 
     private lastIp : string;
 

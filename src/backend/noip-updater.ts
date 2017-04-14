@@ -2,7 +2,7 @@ import * as Process from 'process';
 import * as path from 'path';
 import * as fs from 'fs';
 import * as Immutable from 'immutable';
-import { MyPublicIPChecker } from './MyPublicIpChecker';
+import { MyPublicIpChecker } from './MyPublicIpChecker';
 import { NoIpUpdater } from './NoIpUpdater';
 
 interface Configuration {
@@ -16,7 +16,7 @@ const myHostnames = Immutable.List.of('bitkitchen.org', 'mail.bitkitchen.org', '
 const getConfigFilePath : () => string = () => path.resolve(Process.env['HOME'], '.bitkitchen.org/noip-config.json');
 const configuration : Configuration = (() => JSON.parse(fs.readFileSync(getConfigFilePath(), { encoding: 'utf8' })))();
 
-let checker : MyPublicIPChecker = new MyPublicIPChecker(configuration.initialIp);
+let checker : MyPublicIpChecker = new MyPublicIpChecker(configuration.initialIp);
 let updater : NoIpUpdater = new NoIpUpdater(configuration.auth);
 
 const updateFirstHost : (hostnameList : Immutable.List<string>) => Promise<boolean> =
@@ -37,7 +37,7 @@ const updateFirstHost : (hostnameList : Immutable.List<string>) => Promise<boole
 
 const chainedCheck : () => void = () => {
     checker.check().then((result) => {
-        if (MyPublicIPChecker.isNewIp(result)) {
+        if (MyPublicIpChecker.isNewIp(result)) {
             return updateFirstHost(myHostnames);
         } else {
             return true;
