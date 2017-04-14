@@ -4,7 +4,7 @@ import { ClientRequest, IncomingMessage } from 'http';
 
 const requestOptions = {
     protocol: 'https:',
-    host: 'centos-local',
+    host: 'ipinfo.io',
     path: '/ip',
     method: 'GET'
 };
@@ -13,10 +13,10 @@ const NO_CHANGE = '__nochange__';
 
 export class MyPublicIPChecker {
 
-    private initialIp : string;
+    private lastIp : string;
 
     constructor(initialIp : string) {
-        this.initialIp = initialIp;
+        this.lastIp = initialIp;
     }
 
     public check() : Promise<string> {
@@ -27,13 +27,15 @@ export class MyPublicIPChecker {
 
                 let output : string = '';
 
-                response.on('data', (chunk) => { 
+                response.on('data', (chunk) => {
                     output += chunk;
                 }).on('end', () => {
-                    if (output === this.initialIp) {
+                    let currentIp = output.trim();
+                    if (currentIp === this.lastIp) {
                         resolve(NO_CHANGE);
                     } else {
-                        resolve(output);
+                        this.lastIp = currentIp;
+                        resolve(currentIp);
                     }
                 });
             })
@@ -42,6 +44,7 @@ export class MyPublicIPChecker {
             });
             request.setTimeout(1000)
             request.end();
+
         });
 
     }

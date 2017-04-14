@@ -20,28 +20,28 @@ const errorMessages = Immutable.Map.of(
 
 const serviceHostname = 'dynupdate.no-ip.com';
 
-const defaultRequestOptions : RequestOptions = Immutable.fromJS({
+const defaultRequestOptions : Immutable.Map<String, String> = Immutable.fromJS({
     protocol: 'https:',
-    host: serviceHostname,
+    host: serviceHostname
 });
 
-const defaultHeaders = Immutable.fromJS({
+const defaultHeaders : Immutable.Map<String, String> = Immutable.fromJS({
     Host: serviceHostname,
-    Authorization: 'Basic base64-encoded-auth-string',
     'User-Agent': 'https://github.com/pdkovacs/noip-updater peter.dunay.kovacs@gmail.com'
 });
 
 const pathBase = '/nic/update'
 
-const createPath : (myHostname : string, myIp : string) => string = (myHostname, myIp) => {
-    return `${pathBase}?hostname=${myHostname}&myip=${myIp}`;
+const createPath : (myHostname : string) => string = (myHostname) => {
+    return `${pathBase}?hostname=${myHostname}`;
 }
 
-const createRequestOptions : (myHostname : string, myIp : string, auth : string) => RequestOptions = (myHostname, myIp, auth) => {
-    return Object.assign(defaultRequestOptions, {
-        auth: auth,
-        path: createPath(myHostname, myIp),
-        headers: defaultHeaders
+const createRequestOptions : (myHostname : string, auth : string) => RequestOptions = (myHostname, auth) => {
+    return Object.assign(defaultRequestOptions.toObject(), {
+        path: createPath(myHostname),
+        headers: Object.assign(defaultHeaders.toObject(), {
+            Authorization: 'Basic ' + new Buffer(auth).toString('base64')
+        })
     });
 };
 
@@ -51,18 +51,19 @@ export class NoIpUpdater {
     private auth: string;
 
     constructor(auth : string) {
-        console.log('auth', auth);
         this.auth = auth;
     }
 
-    public update(hostname : string, myip : string) : Promise<string> {
+    public update(hostname : string) : Promise<string> {
         return new Promise((resolve, reject) => {
-            let request = https.request(createRequestOptions(hostname, myip, this.auth), (response) => {
+            console.log(`Updating host ${hostname}...`);
+            let request = https.request(createRequestOptions(hostname, this.auth), (response) => {
                 let status : string = '';
                 response.on('data', (chunk) => { 
                     status += chunk;
                 }).on('end', () => {
-                    this.checkStatus(status).then((result) => {
+                    this.checkStatus(status.trim()).then((result) => {
+                        console.log(`Host updated: ${hostname}`);
                         resolve(result);
                     }, (errorMessage) => {
                         reject(errorMessage);
@@ -79,8 +80,7 @@ export class NoIpUpdater {
 
     private checkStatus(status : string) : Promise<string> {
         return new Promise((resolve, reject) => {
-            if (errorMessages.contains(status)) {
-                console.log(errorMessages.get(status));
+            if (errorMessages.has(status)) {
                 reject(errorMessages.get(status));
             } else {
                 let success = successMessages.filter((value, key) => {
