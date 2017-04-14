@@ -11,7 +11,8 @@
   },
   "scripts": {
     "build": "tsc",
-    "run": "rm -rf dist && tsc && node dist/noip-updater.js"
+    "run": "rm -rf dist && tsc && node dist/noip-updater.js",
+    "package": "npm run build && tar -C $(dirname $PWD) -czf $(basename $PWD).tgz --exclude 'node_modules/@types' --exclude '.DS_Store' $(basename $PWD)/node_modules $(basename $PWD)/dist"
   },
   "author": "peter.dunay.kovacs@gmail.com",
   "license": "Apache-2.0"
