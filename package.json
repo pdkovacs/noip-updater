@@ -4,7 +4,9 @@
   "description": "Regularly check public IP and set the new IP on NOIP.com if changed",
   "main": "index.js",
   "dependencies": {
-    "immutable": "^3.8.1"
+    "@types/winston": "^2.3.0",
+    "immutable": "^3.8.1",
+    "winston": "^2.3.1"
   },
   "devDependencies": {
     "@types/node": "^7.0.12"

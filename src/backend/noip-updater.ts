@@ -2,6 +2,8 @@ import * as Process from 'process';
 import * as path from 'path';
 import * as fs from 'fs';
 import * as Immutable from 'immutable';
+
+import { logger } from './Logger';
 import { MyPublicIpChecker, createMyPublicIpChecker } from './MyPublicIpChecker';
 import { NoIpUpdater } from './NoIpUpdater';
 
@@ -21,13 +23,14 @@ const myHostnames = Immutable.List.of('bitkitchen.org', 'mail.bitkitchen.org', '
 const getConfigFilePath : () => string = () => path.resolve(Process.env['HOME'], '.bitkitchen.org/noip-config.json');
 const configuration : Configuration = (() => JSON.parse(fs.readFileSync(getConfigFilePath(), { encoding: 'utf8' })))();
 
+
 let checker : MyPublicIpChecker = createMyPublicIpChecker(configuration.checker.impl, configuration.checker.initialIp);
 let updater : NoIpUpdater = new NoIpUpdater(configuration.updater.auth);
 
 const updateFirstHost : (hostnameList : Immutable.List<string>) => Promise<boolean> =
     (hostnameList) => {
         return updater.update(hostnameList.first()).then((result) => {
-            console.log('Result of update:', result);
+         logger.log('info', 'Result of update: ' + result);
             let nextList = hostnameList.shift();
             if (nextList.size > 0) {
                 return updateFirstHost(nextList);
@@ -35,7 +38,7 @@ const updateFirstHost : (hostnameList : Immutable.List<string>) => Promise<boole
                 return true;
             }
         }, (errorMessage) => {
-            console.log('Error: ', errorMessage, 'stopping...');
+         logger.log('error', errorMessage + ' stopping...');
             return false;
         });    
     }
@@ -48,10 +51,10 @@ const chainedCheck : () => void = () => {
             return true;
         }
     }, (error) => {
-        console.log("Error: ", error);
+     logger.log('error', error);
         return false;
     }).then((isToBeContinued) => {
-        console.log(`isToBeContinued=${isToBeContinued}`);
+        logger.log('info', `isToBeContinued=${isToBeContinued}`);
         if (isToBeContinued) {
             setTimeout(chainedCheck, configuration.checker.checkIntervall);
         }

@@ -2,6 +2,8 @@ import * as Immutable from 'immutable';
 import * as https from 'https';
 import { RequestOptions } from 'https';
 
+import { logger } from './Logger';
+
 const successMessages = Immutable.Map.of(
     'good',  'DNS hostname update successful. Followed by a space and the IP address it was updated to.',
     'nochg', 'IP address is current, no update performed. Followed by a space and the IP address that it is currently set to.'
@@ -56,14 +58,14 @@ export class NoIpUpdater {
 
     public update(hostname : string) : Promise<string> {
         return new Promise((resolve, reject) => {
-            console.log(`Updating host ${hostname}...`);
+            logger.log('info', `Updating host ${hostname}...`);
             let request = https.request(createRequestOptions(hostname, this.auth), (response) => {
                 let status : string = '';
                 response.on('data', (chunk) => { 
                     status += chunk;
                 }).on('end', () => {
                     this.checkStatus(status.trim()).then((result) => {
-                        console.log(`Host updated: ${hostname}`);
+                        logger.log('info', `Host updated: ${hostname}`);
                         resolve(result);
                     }, (errorMessage) => {
                         reject(errorMessage);
