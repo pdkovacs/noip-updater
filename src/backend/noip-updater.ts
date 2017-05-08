@@ -7,6 +7,8 @@ import { logger } from './Logger';
 import { MyPublicIpChecker, createMyPublicIpChecker } from './MyPublicIpChecker';
 import { NoIpUpdater } from './NoIpUpdater';
 
+logger.log('info', 'process id: %d', Process.pid);
+
 interface Configuration {
     checker: {
         initialIp: string,
@@ -30,7 +32,7 @@ let updater : NoIpUpdater = new NoIpUpdater(configuration.updater.auth);
 const updateFirstHost : (hostnameList : Immutable.List<string>) => Promise<boolean> =
     (hostnameList) => {
         return updater.update(hostnameList.first()).then((result) => {
-         logger.log('info', 'Result of update: ' + result);
+            logger.log('info', 'Result of update: ' + result);
             let nextList = hostnameList.shift();
             if (nextList.size > 0) {
                 return updateFirstHost(nextList);
@@ -51,12 +53,13 @@ const chainedCheck : () => void = () => {
             return true;
         }
     }, (error) => {
-     logger.log('error', error);
-        return false;
+        logger.log('error', error);
+        return error.errno === 'EAI_AGAIN';
     }).then((isToBeContinued) => {
-        logger.log('info', `isToBeContinued=${isToBeContinued}`);
         if (isToBeContinued) {
             setTimeout(chainedCheck, configuration.checker.checkIntervall);
+        } else {
+            logger.log('info', `Exiting...`);
         }
     });
 }

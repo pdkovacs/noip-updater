@@ -6,7 +6,7 @@ export const logger = new (winston.Logger)({
     // colorize the output to the console
     new (winston.transports.Console)({
       timestamp: tsFormat,
-      colorize: true,
+      colorize: false,
     })
   ]
 });
