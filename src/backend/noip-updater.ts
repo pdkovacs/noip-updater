@@ -4,6 +4,7 @@ import * as fs from 'fs';
 import * as Immutable from 'immutable';
 
 import { logger } from './Logger';
+import { ERROR_TYPE, ActionResult, RetryTimer } from './RetryTimer';
 import { MyPublicIpChecker, createMyPublicIpChecker } from './MyPublicIpChecker';
 import { NoIpUpdater } from './NoIpUpdater';
 
@@ -25,9 +26,27 @@ const myHostnames = Immutable.List.of('bitkitchen.org', 'mail.bitkitchen.org', '
 const getConfigFilePath : () => string = () => path.resolve(Process.env['HOME'], '.bitkitchen.org/noip-config.json');
 const configuration : Configuration = (() => JSON.parse(fs.readFileSync(getConfigFilePath(), { encoding: 'utf8' })))();
 
-
 let checker : MyPublicIpChecker = createMyPublicIpChecker(configuration.checker.impl, configuration.checker.initialIp);
 let updater : NoIpUpdater = new NoIpUpdater(configuration.updater.auth);
+let ipCheckRetrier : RetryTimer = new RetryTimer("ip-check", 10000, 10, () => {
+    return new Promise((resolve, reject) => {
+        checker.check().then((result) => {
+            resolve(new ActionResult(result, null, null));
+        }, (error) => {
+            logger.log('error', error);
+            let errorType : ERROR_TYPE;
+            switch(error.errno) {
+                case 'EAI_AGAIN':
+                case 'ENOTFOUND':
+                    errorType = ERROR_TYPE.TransientError;
+                    break;
+                default:
+                    errorType = ERROR_TYPE.PersistentError;
+            }
+            resolve(new ActionResult(null, error, errorType));
+        });
+    });
+});
 
 const updateFirstHost : (hostnameList : Immutable.List<string>) => Promise<boolean> =
     (hostnameList) => {
@@ -36,31 +55,22 @@ const updateFirstHost : (hostnameList : Immutable.List<string>) => Promise<boole
             let nextList = hostnameList.shift();
             if (nextList.size > 0) {
                 return updateFirstHost(nextList);
-            } else {
-                return true;
             }
-        }, (errorMessage) => {
-         logger.log('error', errorMessage + ' stopping...');
-            return false;
         });    
     }
 
 const chainedCheck : () => void = () => {
-    checker.check().then((result) => {
+    ipCheckRetrier.perform()
+    .then((result) => {
         if (MyPublicIpChecker.isNewIp(result)) {
             return updateFirstHost(myHostnames);
-        } else {
-            return true;
         }
-    }, (error) => {
-        logger.log('error', error);
-        return error.errno === 'EAI_AGAIN';
-    }).then((isToBeContinued) => {
-        if (isToBeContinued) {
-            setTimeout(chainedCheck, configuration.checker.checkIntervall);
-        } else {
-            logger.log('info', `Exiting...`);
-        }
+    })
+    .then(() => {
+        setTimeout(chainedCheck, configuration.checker.checkIntervall);
+    })
+    .catch((reason : any) => {
+         logger.log('error', 'stopping...', { reason : reason });
     });
 }
 
