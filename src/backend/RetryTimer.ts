@@ -46,8 +46,12 @@ export class RetryTimer {
                     failure(result.error);
                 } else {
                     this.retryCount++;
-                    logger.log('error', 'An error occurred, will retry...',
-                            { actionName: this.name, error: result.error, retryCount: this.retryCount }
+                    logger.error(`Retrying after ${this.retryInterval} milliseconds`,
+                            {
+                                actionName: this.name,
+                                retryCount: this.retryCount,
+                                error: result.error
+                            }
                     );
                     setTimeout(() => {
                         this._perform(success, failure);

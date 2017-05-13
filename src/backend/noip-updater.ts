@@ -1,52 +1,38 @@
 import * as Process from 'process';
-import * as path from 'path';
-import * as fs from 'fs';
 import * as Immutable from 'immutable';
 
 import { logger } from './Logger';
+import { configuration as config, watcher as configFileWatcher } from './Configuration';
 import { ERROR_TYPE, ActionResult, RetryTimer } from './RetryTimer';
 import { MyPublicIpChecker, createMyPublicIpChecker } from './MyPublicIpChecker';
 import { NoIpUpdater } from './NoIpUpdater';
 
 logger.log('info', 'process id: %d', Process.pid);
-
-interface Configuration {
-    checker: {
-        initialIp: string,
-        checkIntervall : number,
-        impl: string
-    },
-    updater: {
-        auth : string
-    }
-}
-
-const myHostnames = Immutable.List.of('bitkitchen.org', 'mail.bitkitchen.org', 'www.bitkitchen.org');
-
-const getConfigFilePath : () => string = () => path.resolve(Process.env['HOME'], '.bitkitchen.org/noip-config.json');
-const configuration : Configuration = (() => JSON.parse(fs.readFileSync(getConfigFilePath(), { encoding: 'utf8' })))();
-
-let checker : MyPublicIpChecker = createMyPublicIpChecker(configuration.checker.impl, configuration.checker.initialIp);
-let updater : NoIpUpdater = new NoIpUpdater(configuration.updater.auth);
-let ipCheckRetrier : RetryTimer = new RetryTimer("ip-check", 10000, 10, () => {
-    return new Promise((resolve, reject) => {
-        checker.check().then((result) => {
-            resolve(new ActionResult(result, null, null));
-        }, (error) => {
-            logger.log('error', error);
-            let errorType : ERROR_TYPE;
-            switch(error.errno) {
-                case 'EAI_AGAIN':
-                case 'ENOTFOUND':
-                    errorType = ERROR_TYPE.TransientError;
-                    break;
-                default:
-                    errorType = ERROR_TYPE.PersistentError;
-            }
-            resolve(new ActionResult(null, error, errorType));
-        });
-    });
-});
+let checker : MyPublicIpChecker = createMyPublicIpChecker(config.data.checker.impl, config.data.checker.initialIp);
+let updater : NoIpUpdater = new NoIpUpdater(config.data.updater.auth);
+let ipCheckRetrier : RetryTimer = new RetryTimer("ip-check",
+        config.data.checker.error.retryIntervall,
+        config.data.checker.error.maxRetryCount,
+        () => {
+            return new Promise((resolve, reject) => {
+                checker.check().then((result) => {
+                    resolve(new ActionResult(result, null, null));
+                }, (error) => {
+                    logger.log('error', error);
+                    let errorType : ERROR_TYPE;
+                    switch(error.errno) {
+                        case 'EAI_AGAIN':
+                        case 'ENOTFOUND':
+                            errorType = ERROR_TYPE.TransientError;
+                            break;
+                        default:
+                            errorType = ERROR_TYPE.PersistentError;
+                    }
+                    resolve(new ActionResult(null, error, errorType));
+                });
+            });
+        }
+);
 
 const updateFirstHost : (hostnameList : Immutable.List<string>) => Promise<boolean> =
     (hostnameList) => {
@@ -63,14 +49,17 @@ const chainedCheck : () => void = () => {
     ipCheckRetrier.perform()
     .then((result) => {
         if (MyPublicIpChecker.isNewIp(result)) {
-            return updateFirstHost(myHostnames);
+            return updateFirstHost(Immutable.List(config.data.updater.hostNames));
         }
     })
     .then(() => {
-        setTimeout(chainedCheck, configuration.checker.checkIntervall);
+        let delay = config.data.checker.checkIntervall;
+        logger.verbose(`Checking again in ${delay} milliseconds.`);
+        setTimeout(chainedCheck, delay);
     })
     .catch((reason : any) => {
          logger.log('error', 'stopping...', { reason : reason });
+         configFileWatcher.close();
     });
 }
 
