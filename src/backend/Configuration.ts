@@ -32,21 +32,32 @@ let updateConfiguration : () => void = () => {
 }
 updateConfiguration();
 
-export const watcher = fs.watch(getConfigFilePath(), (event, filename) => {
-    switch (event) {
-        case 'rename': // Editing with vim results in this event
-            let exists = fs.existsSync(getConfigFilePath());
-            logger.warn('Ooops! Configuration file was renamed?', { cofigurationFilePath: getConfigFilePath(), exists: exists });
-            if (exists) {
-                updateConfiguration();
-            }
-            break;
-        case 'change':
-            logger.info('Configuration file changed. Updating configuration...', { cofigurationFilePath: getConfigFilePath() });
-            updateConfiguration();
+let watcher : fs.FSWatcher = null;
+
+let watchConfigFile = () => {
+    if (watcher != null) {
+        watcher.close();
     }
-});
+    watcher = fs.watch(getConfigFilePath(), (event, filename) => {
+        switch (event) {
+            case 'rename': // Editing with vim results in this event
+                let exists = fs.existsSync(getConfigFilePath());
+                logger.warn('Ooops! Configuration file was renamed?', { cofigurationFilePath: getConfigFilePath(), exists: exists });
+                if (exists) {
+                    updateConfiguration();
+                    watchConfigFile();
+                }
+                break;
+            case 'change':
+                logger.info('Configuration file changed. Updating configuration...', { cofigurationFilePath: getConfigFilePath() });
+                updateConfiguration();
+        }
+    });
+}
+
+watchConfigFile();
 
 export const configuration = {
-    data: data
+    data: data,
+    watcher: watcher
 };

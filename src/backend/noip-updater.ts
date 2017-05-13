@@ -2,7 +2,7 @@ import * as Process from 'process';
 import * as Immutable from 'immutable';
 
 import { logger } from './Logger';
-import { configuration as config, watcher as configFileWatcher } from './Configuration';
+import { configuration as config } from './Configuration';
 import { ERROR_TYPE, ActionResult, RetryTimer } from './RetryTimer';
 import { MyPublicIpChecker, createMyPublicIpChecker } from './MyPublicIpChecker';
 import { NoIpUpdater } from './NoIpUpdater';
@@ -59,7 +59,7 @@ const chainedCheck : () => void = () => {
     })
     .catch((reason : any) => {
          logger.log('error', 'stopping...', { reason : reason });
-         configFileWatcher.close();
+         config.watcher.close();
     });
 }
 
