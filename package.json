@@ -9,10 +9,13 @@
     "winston": "^2.3.1"
   },
   "devDependencies": {
-    "@types/node": "^7.0.12"
+    "@types/node": "^7.0.12",
+    "tslint": "^5.7.0",
+    "typescript": "^2.5.2"
   },
   "scripts": {
-    "build": "tsc",
+    "lint": "tslint -c tslint.json '{src,test}/**/*.{ts,tsx}'",
+    "build": "npm run lint && tsc",
     "run": "rm -rf build dist && tsc && node dist/noip-updater.js",
     "package": "npm run build && tar -C $(dirname $PWD) -czf dist/$(basename $PWD).tgz --exclude 'node_modules/@types' --exclude '.DS_Store' $(basename $PWD)/node_modules $(basename $PWD)/build"
   },

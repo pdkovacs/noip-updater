@@ -1,43 +1,44 @@
-import * as Immutable from 'immutable';
-import * as https from 'https';
-import { ClientRequest, IncomingMessage } from 'http';
+import * as https from "https";
+import * as Immutable from "immutable";
 
-const NO_CHANGE = '__nochange__';
+import { ClientRequest, IncomingMessage } from "http";
 
-export const createMyPublicIpChecker : (key : string, initalIp : string) => MyPublicIpChecker =
-    (key, initalIp) : MyPublicIpChecker => {
-        switch(key) {
-            case 'ipinfo.io':
+const NO_CHANGE = "__nochange__";
+
+export const createMyPublicIpChecker: (key: string, initalIp: string) => MyPublicIpChecker =
+    (key, initalIp): MyPublicIpChecker => {
+        switch (key) {
+            case "ipinfo.io":
                 return new IpInfoIoChecker(initalIp);
-            case 'whatismypublicip.com':
+            case "whatismypublicip.com":
                 return new WhatIsMyPublicIpCom(initalIp);
         }
-    }
+    };
 
 export abstract class MyPublicIpChecker {
 
-    private lastIp : string;
+    private lastIp: string;
 
-    constructor(initialIp : string) {
+    constructor(initialIp: string) {
         this.lastIp = initialIp;
     }
 
-    abstract getRequestOptions() : https.RequestOptions;
+    public abstract getRequestOptions(): https.RequestOptions;
 
-    abstract parseOutput(output : string) : string;
+    public abstract parseOutput(output: string): string;
 
-    public check() : Promise<string> {
+    public check(): Promise<string> {
 
         return new Promise((resolve, reject) => {
 
-            let request = https.request(this.getRequestOptions(), (response) => {
+            const request = https.request(this.getRequestOptions(), response => {
 
-                let output : string = '';
+                let output: string = "";
 
-                response.on('data', (chunk) => {
+                response.on("data", chunk => {
                     output += chunk;
-                }).on('end', () => {
-                    let currentIp = this.parseOutput(output);
+                }).on("end", () => {
+                    const currentIp = this.parseOutput(output);
                     if (currentIp === this.lastIp) {
                         resolve(NO_CHANGE);
                     } else {
@@ -46,33 +47,33 @@ export abstract class MyPublicIpChecker {
                     }
                 });
             })
-            .on('error', (error) => {
+            .on("error", error => {
                 reject(error);
             });
-            request.setTimeout(1000)
+            request.setTimeout(1000);
             request.end();
 
         });
 
     }
 
-    public static isNewIp(maybeNewIp : string) : boolean {
+    public static isNewIp(maybeNewIp: string): boolean {
         return maybeNewIp !== NO_CHANGE;
     }
 }
 
 class IpInfoIoChecker extends MyPublicIpChecker {
 
-    getRequestOptions(): https.RequestOptions {
+    public getRequestOptions(): https.RequestOptions {
         return {
-            protocol: 'https:',
-            host: 'ipinfo.io',
-            path: '/ip',
-            method: 'GET'
+            protocol: "https:",
+            host: "ipinfo.io",
+            path: "/ip",
+            method: "GET"
         };
     }
 
-    parseOutput(output: string): string {
+    public parseOutput(output: string): string {
         return output.trim();
     }
 
@@ -80,17 +81,17 @@ class IpInfoIoChecker extends MyPublicIpChecker {
 
 class WhatIsMyPublicIpCom extends MyPublicIpChecker {
 
-    getRequestOptions(): https.RequestOptions {
+    public getRequestOptions(): https.RequestOptions {
         return {
-            protocol: 'https:',
-            host: 'whatismypublicip.com',
-            method: 'GET'
+            protocol: "https:",
+            host: "whatismypublicip.com",
+            method: "GET"
         };
     }
 
-    parseOutput(output: string): string {
-        let re = /<div id="up_finished">(\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3})\s*<\/div>/;
-        return output.replace(re, '$1');
+    public parseOutput(output: string): string {
+        const re = /<div id="up_finished">(\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3})\s*<\/div>/;
+        return output.replace(re, "$1");
     }
 
 }

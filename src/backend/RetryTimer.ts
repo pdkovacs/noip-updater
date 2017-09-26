@@ -1,4 +1,4 @@
-import { logger } from './Logger';
+import { logger } from "./Logger";
 
 export enum ERROR_TYPE {
     TransientError,
@@ -6,11 +6,11 @@ export enum ERROR_TYPE {
 }
 
 export class ActionResult {
-    readonly payload : any;
-    readonly errorType : ERROR_TYPE;
-    readonly error : any;
+    public readonly payload: any;
+    public readonly errorType: ERROR_TYPE;
+    public readonly error: any;
 
-    constructor(payload : any, error : any, errorType : ERROR_TYPE) {
+    constructor(payload: any, error: any, errorType: ERROR_TYPE) {
         this.payload = payload;
         this.error = error;
         this.errorType = errorType;
@@ -18,27 +18,27 @@ export class ActionResult {
 }
 
 export class RetryTimer {
-    private readonly name : string;
-    private readonly retryInterval : number;
-    private readonly maxRetryCount : number;
-    private readonly action : () => Promise<ActionResult>;
-    private retryCount : number = 0;
+    private readonly name: string;
+    private readonly retryInterval: number;
+    private readonly maxRetryCount: number;
+    private readonly action: () => Promise<ActionResult>;
+    private retryCount: number = 0;
 
-    constructor(name : string, interval : number, maxRetryCount : number, action : () => Promise<ActionResult>) {
+    constructor(name: string, interval: number, maxRetryCount: number, action: () => Promise<ActionResult>) {
         this.name = name;
         this.retryInterval = interval;
         this.maxRetryCount = maxRetryCount;
         this.action = action;
     }
 
-    public perform() : Promise<any> {
+    public perform(): Promise<any> {
         return new Promise((resolve, reject) => {
             this._perform(resolve, reject);
         });
     }
 
-    private _perform(success : (result : any) => void, failure : (error : any) => void) {
-        this.action().then((result) => {
+    private _perform(success: (result: any) => void, failure: (error: any) => void) {
+        this.action().then(result => {
             if (result.payload) {
                 success(result.payload);
             } else {
@@ -58,9 +58,9 @@ export class RetryTimer {
                     }, this.retryInterval);
                 }
             }
-        }, (error) => {
+        }, error => {
             failure(error);
         });
     }
-    
+
 }
